@@ -1,0 +1,599 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Deep Learning PCB Defect Detection</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Deep Learning-Based PCB Defect Detection</h1>
+
+    <p class="subtitle">
+        YOLO11n-powered PCB quality inspection system
+    </p>
+
+
+    <!-- IMAGE UPLOAD -->
+
+    <div class="card">
+
+        <h2>Upload PCB Image</h2>
+
+        <form method="POST" enctype="multipart/form-data">
+
+            <input
+                type="file"
+                name="file"
+                accept=".jpg,.jpeg,.png"
+                required
+            >
+
+            <button type="submit">
+                Detect PCB Defects
+            </button>
+
+        </form>
+
+        {% if error %}
+
+        <div class="error">
+            {{ error }}
+        </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- WEBCAM -->
+
+    <div class="card">
+
+        <h2>Web Camera Detection</h2>
+
+        <video
+            id="video"
+            autoplay
+            playsinline
+            muted
+            style="display:none; width:100%; max-width:700px; border-radius:10px;">
+        </video>
+
+        <canvas
+            id="canvas"
+            style="display:none;">
+        </canvas>
+
+
+        <div id="cameraButtons">
+
+            <button
+                type="button"
+                id="startCameraButton"
+                onclick="startCamera()">
+                Start Camera
+            </button>
+
+            <button
+                type="button"
+                id="captureButton"
+                onclick="captureAndDetect()"
+                style="display:none;">
+                Capture & Detect
+            </button>
+
+            <button
+                type="button"
+                id="stopCameraButton"
+                onclick="stopCamera()"
+                style="display:none;">
+                Stop Camera
+            </button>
+
+        </div>
+
+
+        <div id="cameraMessage"></div>
+
+        <div id="cameraResult"></div>
+
+    </div>
+
+
+    <!-- IMAGE RESULT -->
+
+    {% if image_path %}
+
+    <div class="card">
+
+        <h2>Inspection Result</h2>
+
+        <img
+            src="{{ image_path }}"
+            alt="PCB Image"
+            class="pcb-image"
+        >
+
+
+        {% if status == "PASS" %}
+
+        <div class="status pass">
+            PASS - No Defect Detected
+        </div>
+
+        {% else %}
+
+        <div class="status fail">
+            FAIL - Defect Detected
+        </div>
+
+        {% endif %}
+
+
+        {% if detections %}
+
+        <h3>Detected Defects</h3>
+
+        <table>
+
+            <thead>
+
+                <tr>
+                    <th>Defect</th>
+                    <th>Confidence</th>
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% for detection in detections %}
+
+                <tr>
+
+                    <td>
+                        {{ detection.defect }}
+                    </td>
+
+                    <td>
+                        {{ detection.confidence }}%
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+        {% endif %}
+
+    </div>
+
+    {% endif %}
+
+</div>
+
+
+<script>
+
+let stream = null;
+
+
+/* =========================
+   START CAMERA
+========================= */
+
+async function startCamera() {
+
+    const message =
+        document.getElementById("cameraMessage");
+
+    try {
+
+        if (!navigator.mediaDevices ||
+            !navigator.mediaDevices.getUserMedia) {
+
+            message.innerHTML =
+                "<div class='error'>" +
+                "Camera access is not supported by this browser." +
+                "</div>";
+
+            return;
+        }
+
+
+        message.innerHTML =
+            "<p>Requesting camera access...</p>";
+
+
+        stream = await navigator.mediaDevices.getUserMedia({
+
+            video: {
+                width: {
+                    ideal: 1280
+                },
+                height: {
+                    ideal: 720
+                },
+                facingMode: "environment"
+            },
+
+            audio: false
+
+        });
+
+
+        const video =
+            document.getElementById("video");
+
+
+        video.srcObject = stream;
+
+        video.style.display = "block";
+
+
+        document.getElementById(
+            "startCameraButton"
+        ).style.display = "none";
+
+
+        document.getElementById(
+            "captureButton"
+        ).style.display = "inline-block";
+
+
+        document.getElementById(
+            "stopCameraButton"
+        ).style.display = "inline-block";
+
+
+        message.innerHTML =
+            "<p>Camera started successfully. Position the PCB and click Capture & Detect.</p>";
+
+
+    }
+
+    catch (error) {
+
+        console.error("Camera error:", error);
+
+
+        message.innerHTML =
+            "<div class='error'>" +
+            "Unable to access the camera. Please allow camera permission in your browser." +
+            "</div>";
+
+    }
+
+}
+
+
+/* =========================
+   CAPTURE AND DETECT
+========================= */
+
+async function captureAndDetect() {
+
+    const video =
+        document.getElementById("video");
+
+    const canvas =
+        document.getElementById("canvas");
+
+    const result =
+        document.getElementById("cameraResult");
+
+
+    if (!stream) {
+
+        result.innerHTML =
+            "<div class='error'>" +
+            "Please start the camera first." +
+            "</div>";
+
+        return;
+
+    }
+
+
+    if (video.videoWidth === 0 ||
+        video.videoHeight === 0) {
+
+        result.innerHTML =
+            "<div class='error'>" +
+            "Camera video is not ready yet. Please wait a moment and try again." +
+            "</div>";
+
+        return;
+
+    }
+
+
+    canvas.width = video.videoWidth;
+
+    canvas.height = video.videoHeight;
+
+
+    const context =
+        canvas.getContext("2d");
+
+
+    context.drawImage(
+        video,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    result.innerHTML =
+        "<p>Detecting PCB defects using YOLO11n...</p>";
+
+
+    canvas.toBlob(
+
+        async function(blob) {
+
+            if (!blob) {
+
+                result.innerHTML =
+                    "<div class='error'>" +
+                    "Unable to capture camera image." +
+                    "</div>";
+
+                return;
+
+            }
+
+
+            const formData =
+                new FormData();
+
+
+            formData.append(
+                "camera_image",
+                blob,
+                "webcam_capture.jpg"
+            );
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/camera_predict",
+                        {
+                            method: "POST",
+                            body: formData
+                        }
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                if (!response.ok) {
+
+                    result.innerHTML =
+                        "<div class='error'>" +
+                        (data.error ||
+                        "Camera prediction failed.") +
+                        "</div>";
+
+                    return;
+
+                }
+
+
+                displayCameraResult(data);
+
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    "Prediction error:",
+                    error
+                );
+
+
+                result.innerHTML =
+                    "<div class='error'>" +
+                    "Unable to connect to the Flask prediction server." +
+                    "</div>";
+
+            }
+
+        },
+
+        "image/jpeg",
+
+        0.90
+
+    );
+
+}
+
+
+/* =========================
+   DISPLAY RESULT
+========================= */
+
+function displayCameraResult(data) {
+
+    const result =
+        document.getElementById("cameraResult");
+
+
+    let html = "";
+
+
+    if (data.status === "PASS") {
+
+        html +=
+            "<div class='status pass'>" +
+            "PASS - No Defect Detected" +
+            "</div>";
+
+    }
+
+    else {
+
+        html +=
+            "<div class='status fail'>" +
+            "FAIL - Defect Detected" +
+            "</div>";
+
+    }
+
+
+    if (data.detections &&
+        data.detections.length > 0) {
+
+
+        html +=
+            "<h3>YOLO11n Detection</h3>";
+
+
+        html +=
+            "<table>" +
+            "<thead>" +
+            "<tr>" +
+            "<th>Defect</th>" +
+            "<th>Confidence</th>" +
+            "</tr>" +
+            "</thead>" +
+            "<tbody>";
+
+
+        data.detections.forEach(
+            function(detection) {
+
+                html +=
+                    "<tr>" +
+                    "<td>" +
+                    detection.defect +
+                    "</td>" +
+                    "<td>" +
+                    detection.confidence +
+                    "%</td>" +
+                    "</tr>";
+
+            }
+        );
+
+
+        html +=
+            "</tbody>" +
+            "</table>";
+
+    }
+
+    else {
+
+        html +=
+            "<p>No PCB defects detected.</p>";
+
+    }
+
+
+    result.innerHTML = html;
+
+}
+
+
+/* =========================
+   STOP CAMERA
+========================= */
+
+function stopCamera() {
+
+    if (stream) {
+
+        stream
+            .getTracks()
+            .forEach(
+                function(track) {
+                    track.stop();
+                }
+            );
+
+        stream = null;
+
+    }
+
+
+    const video =
+        document.getElementById("video");
+
+
+    video.srcObject = null;
+
+    video.style.display = "none";
+
+
+    document.getElementById(
+        "startCameraButton"
+    ).style.display = "inline-block";
+
+
+    document.getElementById(
+        "captureButton"
+    ).style.display = "none";
+
+
+    document.getElementById(
+        "stopCameraButton"
+    ).style.display = "none";
+
+
+    document.getElementById(
+        "cameraMessage"
+    ).innerHTML =
+        "<p>Camera stopped.</p>";
+
+}
+
+
+/* =========================
+   PAGE CLOSE
+========================= */
+
+window.addEventListener(
+    "beforeunload",
+    function() {
+
+        if (stream) {
+
+            stream
+                .getTracks()
+                .forEach(
+                    function(track) {
+                        track.stop();
+                    }
+                );
+
+        }
+
+    }
+);
+
+</script>
+
+</body>
+</html>
+```
