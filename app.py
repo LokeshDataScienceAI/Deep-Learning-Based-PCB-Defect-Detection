@@ -10,12 +10,11 @@ app = Flask(__name__)
 # Project paths
 # --------------------------------------------------
 
+# Project paths
 BASE_DIR = Path(__file__).resolve().parent
 
-# Exact location of the trained YOLO11n model
-MODEL_PATH = Path(
-    r"C:\HOPE AI\AI Course Tamil\Week-11_Deep Learning\Deep Learning-Based PCB Defect Detection\models\pcb_yolo11n-2\weights\best.pt"
-)
+# YOLO11n model path
+MODEL_PATH = BASE_DIR / "models" / "pcb_yolo11n" / "weights" / "best.pt"
 
 UPLOAD_FOLDER = BASE_DIR / "static" / "uploads"
 UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
