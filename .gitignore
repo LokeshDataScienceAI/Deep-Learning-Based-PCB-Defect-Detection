@@ -216,3 +216,21 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# PCB dataset - do not upload
+PCB-DATASET-master/
+Annotations/
+images/
+PCB_USED/
+rotation/
+*.xml
+
+# Generated YOLO dataset - do not upload images/labels
+dataset/images/
+dataset/labels/
+
+# YOLO training outputs
+runs/
+models/pcb_yolo11n/results/
+models/pcb_yolo11n/*.csv
+# YOLO last checkpoint
+models/pcb_yolo11n/weights/last.pt
