@@ -133,6 +133,9 @@ def index():
 # --------------------------------------------------
 # Web Camera Prediction
 # --------------------------------------------------
+@app.route("/health")
+def health():
+    return "OK", 200
 
 @app.route("/camera_predict", methods=["POST"])
 def camera_predict():
