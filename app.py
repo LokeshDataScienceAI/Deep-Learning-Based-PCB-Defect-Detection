@@ -10,7 +10,6 @@ app = Flask(__name__)
 # Project paths
 # --------------------------------------------------
 
-# Project paths
 BASE_DIR = Path(__file__).resolve().parent
 
 # YOLO11n model path
@@ -92,11 +91,12 @@ def index():
 
         file.save(upload_path)
 
-        # YOLO11n prediction
+        # YOLO11n prediction - CPU friendly for Render
         results = model.predict(
             source=str(upload_path),
-            imgsz=640,
+            imgsz=320,
             conf=0.25,
+            device="cpu",
             verbose=False
         )
 
@@ -156,11 +156,12 @@ def camera_predict():
 
     file.save(upload_path)
 
-    # YOLO11n prediction
+    # YOLO11n prediction - CPU friendly for Render
     results = model.predict(
         source=str(upload_path),
-        imgsz=640,
+        imgsz=320,
         conf=0.25,
+        device="cpu",
         verbose=False
     )
 
