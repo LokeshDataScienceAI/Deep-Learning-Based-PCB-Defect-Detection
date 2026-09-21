@@ -15,6 +15,10 @@ BASE_DIR = Path(__file__).resolve().parent
 # YOLO11n model path
 MODEL_PATH = BASE_DIR / "models" / "pcb_yolo11n" / "weights" / "best.pt"
 
+# Debug checks for Render
+print("MODEL PATH:", MODEL_PATH, flush=True)
+print("MODEL EXISTS:", MODEL_PATH.exists(), flush=True)
+
 UPLOAD_FOLDER = BASE_DIR / "static" / "uploads"
 UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 
@@ -91,7 +95,7 @@ def index():
 
         file.save(upload_path)
 
-        # YOLO11n prediction - CPU friendly for Render
+        # YOLO11n prediction
         results = model.predict(
             source=str(upload_path),
             imgsz=320,
@@ -131,11 +135,17 @@ def index():
 
 
 # --------------------------------------------------
-# Web Camera Prediction
+# Health Check
 # --------------------------------------------------
+
 @app.route("/health")
 def health():
-    return {"status": "healthy"}, 200
+    return "OK", 200
+
+
+# --------------------------------------------------
+# Web Camera Prediction
+# --------------------------------------------------
 
 @app.route("/camera_predict", methods=["POST"])
 def camera_predict():
@@ -159,7 +169,7 @@ def camera_predict():
 
     file.save(upload_path)
 
-    # YOLO11n prediction - CPU friendly for Render
+    # YOLO11n prediction
     results = model.predict(
         source=str(upload_path),
         imgsz=320,
