@@ -135,7 +135,7 @@ def index():
 # --------------------------------------------------
 @app.route("/health")
 def health():
-    return "OK", 200
+    return {"status": "healthy"}, 200
 
 @app.route("/camera_predict", methods=["POST"])
 def camera_predict():
